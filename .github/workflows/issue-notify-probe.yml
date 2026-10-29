@@ -1,0 +1,22 @@
+name: issue-notify-probe
+on:
+  issues:
+    types: [opened, edited]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: build card exactly like target
+        env:
+          SECTIONS: '[{"activityTitle": ${{ toJSON(github.event.sender.login) }},"activitySubtitle": ${{ toJSON(github.event.issue.updated_at) }},"activityImage": "${{ github.event.sender.avatar_url }}","facts":[{"name":"Repository","value": ${{ toJSON(github.event.repository.name) }} },{"name":"Issue #","value": ${{ toJSON(github.event.issue.number) }} }],"text": ${{ toJSON(github.event.issue.body) }} }]'
+          TITLE: "Issue ${{github.event.action}}: \"${{ github.event.issue.title }}\""
+          ACTIONS: '[{ "@type": "OpenUri", "name": "View in GitHub", "targets": [{ "os": "default", "uri": "http://github.com/epam/${{ github.event.repository.name }}/issues/${{ github.event.issue.number }}" }] }]'
+        run: |
+          printf '%s\n' "$SECTIONS" > sections.json
+          if jq -e . sections.json >/dev/null 2>&1; then echo "SECTIONS_VALID_JSON=yes"; else echo "SECTIONS_VALID_JSON=no"; echo "RAW=$SECTIONS"; fi
+          echo "ACTIONS_VALID_JSON=$(printf '%s' "$ACTIONS" | jq -e . >/dev/null 2>&1 && echo yes || echo no)"
+          echo "PARSED_TEXT_BEGIN"; jq -r '.[0].text' sections.json; echo "PARSED_TEXT_END"
+          echo "ARGV_BEGIN"; printf 'arg=[%s]\n' --title "$TITLE"; echo "ARGV_END"
+          echo "RECURSE_CHECK=[${{ github.event.issue.title }}]"
