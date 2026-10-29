@@ -1,0 +1,30 @@
+name: payload-probe
+on:
+  issues:
+    types: [opened, reopened, closed]
+permissions:
+  issues: write
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: dump payload fields
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+        run: |
+          echo "action=${{ github.event.action }}"
+          echo "number_json=$(jq -r '.issue.number|type' "$GITHUB_EVENT_PATH")"
+          echo "number_rendered=[${ISSUE_NUMBER}]"
+          echo "url_rendered=[${ISSUE_URL}]"
+          echo "body_length=${#ISSUE_BODY}"
+          echo "body_marker=$(printf '%s' "$ISSUE_BODY" | grep -c 'PWNMARKER' || true)"
+          test ! -e /tmp/pwned && echo "no-side-effect-file"
+      - name: replicate-target-reopen-lines
+        if: github.event.action == 'reopened'
+        run: |
+          ISSUE_NUMBER=${{ github.event.issue.number }}
+          echo "replicated_number=[$ISSUE_NUMBER]"
+    # second job mirrors the target's per-action jobs
