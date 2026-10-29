@@ -24,7 +24,7 @@ async function main() {
     'poc-payload/gadget.js->gadget.js,poc-payload/pwned.txt->pwned.txt').split(',')
 
   // where actions/download-artifact will extract in the consuming job
-  const extractDir = path.join(process.env.RUNNER_TEMP, process.env.INPUT_EXTRACT_DIR || 'foundry_artifacts')
+  const extractDir = path.join(process.env.RUNNER_TEMP, process.env.INPUT_EXTRACT_DIR || process.env['INPUT_EXTRACT-DIR'] || 'foundry_artifacts')
   const workspace = process.env.GITHUB_WORKSPACE
 
   const spec = []
