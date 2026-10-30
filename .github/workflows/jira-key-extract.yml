@@ -1,0 +1,27 @@
+name: PoC Jira key extraction
+on:
+  issues:
+    types: [closed]
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  close-jira:
+    name: Close Jira ticket
+    runs-on: ubuntu-latest
+    steps:
+      - name: Find Jira key
+        id: find
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          JIRA_KEY=$(gh issue view ${{ github.event.issue.number }} --comments --repo ${{ github.repository }} | grep 'was created for internal tracking' | grep -oE 'CLOUDP-[0-9]+' | head -1)
+          echo "key=$JIRA_KEY" >> "$GITHUB_OUTPUT"
+          echo "EXTRACTED_JIRA_KEY=[$JIRA_KEY]"
+          echo "---BEGIN_GH_ISSUE_VIEW---"
+          gh issue view ${{ github.event.issue.number }} --comments --repo ${{ github.repository }}
+          echo "---END_GH_ISSUE_VIEW---"
+      - name: Stand-in for transition-jira
+        run: echo "would transition Jira issue-key=${{ steps.find.outputs.key }}"
