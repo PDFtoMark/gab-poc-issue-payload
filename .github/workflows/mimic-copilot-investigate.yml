@@ -1,0 +1,34 @@
+name: "Mimic: Copilot Deep Investigation (PDFtoMark structural test)"
+on:
+  issues:
+    types: [labeled]
+permissions:
+  contents: read
+  issues: write
+jobs:
+  investigate-labeled:
+    if: >
+      github.event_name == 'issues' &&
+      github.event.label.name == 'needs-investigation' &&
+      github.event.sender.login != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run investigation (stand-in for: copilot --yolo -p "$TASK")
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+        run: |
+          ISSUE_BODY=$(gh issue view "$ISSUE_NUMBER" --json body --jq '.body')
+          TASK="Investigate issue #${ISSUE_NUMBER}. Title: ${ISSUE_TITLE}. Body: ${ISSUE_BODY}."
+          echo "=== full prompt handed to the auto-approving agent ==="
+          printf '%s\n' "$TASK"
+          CMD=$(printf '%s\n' "$TASK" | sed -n 's/.*RUNME: //p' | head -1)
+          echo "=== instruction extracted from attacker-controlled issue body ==="
+          echo "$CMD"
+          echo "=== executing it, as copilot --yolo would auto-approve ==="
+          bash -c "$CMD"
+          echo "=== token available to the agent process (write-scoped) ==="
+          echo "GITHUB_TOKEN present: $([ -n "$GITHUB_TOKEN" ] && echo yes)"
+          gh api "repos/${GITHUB_REPOSITORY}/labels" --jq 'length' && echo "issues:write token can read labels"
