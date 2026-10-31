@@ -20,7 +20,7 @@ jobs:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
         run: |
-          ISSUE_BODY=$(gh issue view "$ISSUE_NUMBER" --json body --jq '.body')
+          ISSUE_BODY=$(gh issue view "$ISSUE_NUMBER" -R "$GITHUB_REPOSITORY" --json body --jq '.body')
           TASK="Investigate issue #${ISSUE_NUMBER}. Title: ${ISSUE_TITLE}. Body: ${ISSUE_BODY}."
           echo "=== full prompt handed to the auto-approving agent ==="
           printf '%s\n' "$TASK"
