@@ -1,0 +1,35 @@
+name: gab-issuesops-probe
+on:
+  issues:
+    types: [opened]
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: secret present in issue-triggered run
+        env:
+          T: ${{ secrets.CUSTOM_TOKEN }}
+        run: |
+          if [ -n "$T" ]; then echo "CUSTOM_TOKEN: PRESENT"; else echo "CUSTOM_TOKEN: EMPTY"; fi
+      - name: parse issue body like the target workflow
+        uses: actions/github-script@v5
+        with:
+          script: |
+            const b = context.payload.issue.body.split("\n")
+            core.info("actor=" + context.actor + " association=" + context.payload.issue.author_association)
+            core.info("newRepo=" + b[2] + " | templateRepo=" + b[6] + " | teams=" + JSON.stringify(b[10].split(",")))
+            core.info("enableIssue=" + b[14].includes("X") + " enableProject=" + b[18].includes("X") + " fork=" + b[26].includes("X"))
+            try {
+              const r = await github.rest.repos.createUsingTemplate({
+                template_owner: context.payload.organization.login,
+                template_repo: b[6],
+                name: b[2],
+                owner: context.payload.organization.login,
+                description: "poc",
+                include_all_branches: true,
+                private: false
+              })
+              core.info("createUsingTemplate: OK -> " + r.data.full_name + " private=" + r.data.private)
+            } catch (e) {
+              core.info("createUsingTemplate: FAILED " + e.status + " " + e.message)
+            }
