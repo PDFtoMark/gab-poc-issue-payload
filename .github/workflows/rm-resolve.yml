@@ -1,0 +1,15 @@
+name: rm-resolve-probe
+on:
+  workflow_dispatch:
+
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: resolve third-party action pinned to main
+        uses: code-423n4/repo-moderator@main
+        with:
+          github-token: dummy-token
+          sponsor-team-slug: dummy-team
+          allowed-labels: a, b
