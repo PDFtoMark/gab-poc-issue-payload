@@ -1,0 +1,55 @@
+name: bp-issuecomment-probe
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: read
+jobs:
+  backport:
+    runs-on: ubuntu-latest
+    if: >
+      (
+        github.event_name == 'pull_request_target' &&
+        github.event.pull_request.merged &&
+        github.event.pull_request.base.ref == 'main'
+      ) || (
+        github.event_name == 'issue_comment' &&
+        github.event.issue.pull_request &&
+        github.event.comment.user.id != 97796249 &&
+        startsWith(github.event.comment.body, '/backport')
+      )
+    steps:
+      - name: gate-passed
+        run: echo "JOB_RAN event=${GITHUB_EVENT_NAME} comment_body=[${{ github.event.comment.body }}]"
+      - name: dump-payload-shape
+        run: |
+          echo "top_level_keys: $(jq -rc 'keys' "$GITHUB_EVENT_PATH")"
+          echo "payload.pull_request_type: $(jq -r '.pull_request|type' "$GITHUB_EVENT_PATH")"
+          echo "issue.pull_request_present: $(jq -r '.issue.pull_request != null' "$GITHUB_EVENT_PATH")"
+          echo "issue.labels: $(jq -rc '[.issue.labels[].name]' "$GITHUB_EVENT_PATH")"
+      - name: extract-targets
+        id: extract-targets
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = context.payload.pull_request?.labels || [];
+            const backportLabels = labels
+              .map(label => label.name)
+              .filter(name => name.startsWith('backport/'))
+              .map(name => {
+                const version = name.replace('backport/', '');
+                return `release/${version}`;
+              });
+            if (backportLabels.length > 0) {
+              console.log(`Found backport targets: ${backportLabels.join(', ')}`);
+              core.setOutput('targets', backportLabels.join(' '));
+              core.setOutput('has-targets', 'true');
+            } else {
+              console.log('No backport labels found');
+              core.setOutput('has-targets', 'false');
+            }
+      - name: action-step-gate
+        if: steps.extract-targets.outputs.has-targets == 'true'
+        run: echo "BACKPORT_ACTION_STEP_WOULD_RUN targets=[${{ steps.extract-targets.outputs.targets }}]"
+      - name: verdict
+        run: echo "has-targets=${{ steps.extract-targets.outputs.has-targets }}"
