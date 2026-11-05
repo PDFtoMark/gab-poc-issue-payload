@@ -1,0 +1,25 @@
+name: "Oryx IssueAssign Probe"
+on:
+  issues:
+    types: [opened, reopened]
+
+env:
+  ISSUE_NUM: ${{ github.event.issue.number }}
+  TOKEN: ${{ github.token }}
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show resolved values the way IssueAssign.yaml uses them
+        run: |
+          echo "resolved ISSUE_NUM: [${{ env.ISSUE_NUM }}]"
+          echo "argv-shaped command: ./scripts/oncallAutoAssignIssue.sh --token <redacted> --issue ${{ env.ISSUE_NUM }}"
+          python3 - <<'PY'
+          import json, os
+          d = json.load(open(os.environ['GITHUB_EVENT_PATH']))
+          print('payload issue.number repr:', repr(d['issue']['number']))
+          print('payload issue.number type:', type(d['issue']['number']).__name__)
+          print('payload issue.title repr:', repr(d['issue']['title'])[:120])
+          print('payload issue.body repr:', repr(d['issue']['body'])[:120])
+          PY
