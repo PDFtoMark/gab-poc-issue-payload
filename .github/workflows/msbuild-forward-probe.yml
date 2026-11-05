@@ -1,0 +1,41 @@
+name: msbuild-forward-probe
+on:
+  issues:
+    types: [opened]
+permissions:
+  contents: read
+  issues: write
+jobs:
+  forward-mirror:
+    if: ${{ !startsWith(github.event.issue.title, '[PROBE]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create issue in Copilot Prompt repo (mirror)
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const title = context.payload.issue.title;
+            const body = `Original entry by @${context.payload.issue.user.login} in ${context.repo.owner}/${context.repo.repo}\n\n---\n${context.payload.issue.body}`;
+            await github.rest.issues.create({
+              owner: 'PDFtoMark',
+              repo: 'gab-poc-issue-payload',
+              title: '[PROBE] ' + title,
+              body: body
+            });
+  dead-token-mirror:
+    if: ${{ !startsWith(github.event.issue.title, '[PROBE]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create issue with unset PAT (mirror of live state)
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        with:
+          github-token: ${{ secrets.TARGET_REPO_PAT }}
+          script: |
+            const title = context.payload.issue.title;
+            await github.rest.issues.create({
+              owner: 'PDFtoMark',
+              repo: 'gab-poc-issue-payload',
+              title: '[PROBE-DEAD] ' + title,
+              body: 'dead-token probe'
+            });
