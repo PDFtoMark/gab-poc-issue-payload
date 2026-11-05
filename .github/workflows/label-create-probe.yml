@@ -1,0 +1,23 @@
+name: label-create-probe
+on:
+  issues:
+    types: [opened, labeled]
+permissions:
+  contents: read
+  issues: write
+jobs:
+  gate:
+    if: github.event.label.name == 'probe-decompose' && contains(github.event.issue.labels.*.name, 'probe-prd')
+    runs-on: ubuntu-latest
+    steps:
+      - name: gate
+        run: |
+          echo "GATE-PASSED action=${{ github.event.action }} labelname=${{ github.event.label.name }} issue=${{ github.event.issue.number }}"
+          echo "labels=${{ join(github.event.issue.labels.*.name, ',') }}"
+  any:
+    if: github.event.action == 'opened' || github.event.action == 'labeled'
+    runs-on: ubuntu-latest
+    steps:
+      - name: log
+        run: |
+          echo "ANY action=${{ github.event.action }} labelname=[${{ github.event.label.name }}] issue=${{ github.event.issue.number }} labels=${{ join(github.event.issue.labels.*.name, ',') }}"
